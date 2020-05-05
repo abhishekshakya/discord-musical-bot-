@@ -168,5 +168,4 @@ async def stop(ctx):
         print("No music playing failed to stop")
         await ctx.send("No music playing failed to stop")
 
-client.run("NzA3MjE4MTUyMzA3ODE4NTA3.XrF2GQ.U_-Z4t8Cm6boQOWfLMvWPjhkafM")
-# client.run(os.environ['token'])#for heruku)
+client.run(os.environ['token'])#for heruku)
