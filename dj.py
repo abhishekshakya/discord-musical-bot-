@@ -3,10 +3,33 @@ from discord.ext import commands
 from discord.utils import get
 import youtube_dl
 import os
+import requests
 
 client = commands.Bot(command_prefix='>',description="aaja baby aaja tera gana bja du")
 client.remove_command('help')
+##########################
+vids = [] ##filled after performing search
+##############################################youtube video class
+class yt_video:
 
+    def __init__(self,vid_id,vid_title,channel_name):
+        self.vid_id = vid_id
+        self.vid_title = vid_title
+        self.channel_name = channel_name
+
+    def get_id(self):
+        return self.vid_id
+    
+    def get_title(self):
+        return self.vid_title
+    
+    def get_channel(self):
+        return self.channel_name
+
+
+
+
+###################################################
 
 station=705376208745005121 #channel id
 dj = 707218152307818507 #bot member id
@@ -43,6 +66,10 @@ async def help(ctx):
     >resume                                 *to resume*    
 
     >vol *1 - 100*                          *volume*
+
+    >search *moosewala-same-beef*               *seperated by dash(-) search term
+
+    >lock *1-5*                             *select option to play from 5 search results*
 
     '''
     embed.set_author(name='help')
@@ -138,7 +165,7 @@ async def play(ctx, url= None):
 
     voice.play(discord.FFmpegPCMAudio("song.mp3"),after = lambda e: print(f"{name} has finished playing"))
     voice.source = discord.PCMVolumeTransformer(voice.source)
-    voice.source.volume = 0.20
+    voice.source.volume = 0.12
 
     nname = name.rsplit("-",2)[0]##############testing 
     p = "▶"
@@ -202,6 +229,53 @@ async def vol(ctx,vol):
     voice = get(client.voice_clients,guild=ctx.guild)
     voice.source.volume = vol
     await ctx.send(f"🔊  {(int)(vol*100)}")
+
+
+@client.command()
+async def search(ctx,keyword=None):
+    if keyword == None:
+        await ctx.send("❌ pls provide keyword ❌ *(>search rinkiya-ke-papa)*")
+        return
+    key = keyword.replace('-',' ')
+    global vids
+    vids = youtube(key)
+    k=1
+    emoji = ["1️⃣","2️⃣", "3️⃣", "4️⃣","5️⃣"]
+    for v in vids:
+        content = f"---------------------------------------------------------\n➡ **choice number** {emoji[k-1]} \n➡ **Title** : *{v.vid_title}* \n➡ **Channel** : *{v.channel_name}🎶*"
+        k = k+1
+        await ctx.send(content)
+
+@client.command()
+async def lock(ctx,id:int):
+    global vids
+    if len(vids) == 0:
+        await ctx.send("🧠 phle *>search moosewala* to chla bhaai 🧠")
+        return
+    url = f"https://www.youtube.com/watch?v={vids[(id-1)].vid_id}"
+    await play(ctx,url)
+
+def youtube(key):
+    yt = os.environ['yt']
+    params = {
+        'part':'snippet',
+        'q':key,
+        'regionCode': 'in',
+        'type':'video',
+        'maxResults':'5',
+        'key': yt,
+        'videoDuration':'medium'
+    }
+
+    data = requests.get('https://www.googleapis.com/youtube/v3/search',params=params).json()
+
+    vids=[]
+
+    for items in data['items']:
+        vids.append(yt_video(items['id']['videoId'],items['snippet']['title'],items['snippet']['channelTitle']))
+    
+    return vids
+
 
 client.run(os.environ['token'])#for heruku)
 
