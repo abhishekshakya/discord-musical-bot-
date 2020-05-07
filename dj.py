@@ -4,12 +4,14 @@ from discord.utils import get
 import youtube_dl
 import os
 import requests
+import random
+import asyncio
 
 client = commands.Bot(command_prefix='>',description="aaja baby aaja tera gana bja du")
 client.remove_command('help')
-##########################
-vids = [] ##filled after performing search
-##############################################youtube video class
+
+
+#--------------------------------------------youtube video class-----------------------------------------
 class yt_video:
 
     def __init__(self,vid_id,vid_title,channel_name):
@@ -28,11 +30,65 @@ class yt_video:
 
 
 
+##----------------------------------------------GLOBALS------------------------------------------
 
-###################################################
+station =0000 #channel id ##NOT REQUIRED in which music bot would get in
+dj = 707218152307818507 #bot member id  ##PUT YOUR CLIENT ID FROM DISCORD APPLICATION PORTAL
+vids = [] ##filled after performing search
+volume = 0.03
 
-station=705376208745005121 #channel id
-dj = 707218152307818507 #bot member id
+####--------------------------------------------HELPER FUN------------------------------------------
+def voice_id(ctx):
+    global station
+    guildchannels = ctx.guild.channels
+
+    for channel in guildchannels:
+        if channel.id == station:
+            return
+
+    pitaji = ctx.message.author.id
+    # print(pitaji,"pitaji",type(pitaji))
+    k = 1
+    alist=[]
+    for channel in guildchannels:
+        # print(channel.type,type(channel.type),k)
+        k = k+1
+        if channel.type == discord.ChannelType.voice:
+            mem = channel.members
+            for reme in mem:
+                print(reme.id,channel.name,type(reme.id))
+                # if reme.id == pitaji
+                #     station = channel.id
+                #     return
+            alist.append(channel.id)
+    
+    station = random.choice(alist)
+
+###----------------------------------------------------------------------Delete prev 10 msgs to avoid khich pich-----------------------------------------
+
+async def delete_hist(ctx):
+    mggs = await ctx.channel.history(limit=10).flatten()
+    mggs.reverse()
+    for msg in mggs:
+        if msg.author == client.user:
+            await msg.delete()
+
+##-------------------------------------------------------------------------RReaection based music to play--------------------------------------------------
+
+async def reactions(ctx):
+    msgs = await ctx.channel.history(limit=7).flatten()
+    msgs.reverse()
+    ans = -1
+    maxi = 0
+    i=0
+    for msg in msgs:
+        if len(msg.reactions) > maxi:
+            maxi = len(msg.reactions)
+            ans = i 
+        i = i+1
+    
+    return ans
+#####______________________________________________________________________________________________________________________________REQUIRED____________________________________________
 
 
 
@@ -44,6 +100,9 @@ async def on_ready():
 
 @client.command()
 async def help(ctx):
+    
+    voice_id(ctx)
+    
     author = ctx.message.author
 
     embed = discord.Embed(
@@ -79,6 +138,9 @@ async def help(ctx):
 
 @client.command()#needed pynacl package for voice
 async def join(ctx):
+  
+    voice_id(ctx)
+    
     channel = client.get_channel(station)
     ind=0
     mem = channel.members
@@ -115,6 +177,9 @@ async def dc(ctx):
 
 @client.command()
 async def play(ctx, url= None):
+    
+    station = voice_id(ctx)
+
     if url == None:
         await ctx.send(f"⚠ Link to dey ⚠")
         return
@@ -136,7 +201,7 @@ async def play(ctx, url= None):
         os.remove("song.mp3")
         print("Removed old song file")
         
-       
+    
     await ctx.send(f"getting everything ready ⏳⏳")
     
 
@@ -165,7 +230,8 @@ async def play(ctx, url= None):
 
     voice.play(discord.FFmpegPCMAudio("song.mp3"),after = lambda e: print(f"{name} has finished playing"))
     voice.source = discord.PCMVolumeTransformer(voice.source)
-    voice.source.volume = 0.12
+    global volume
+    voice.source.volume = volume
 
     nname = name.rsplit("-",2)[0]##############testing 
     p = "▶"
@@ -177,7 +243,6 @@ async def play(ctx, url= None):
 
 @client.command()
 async def pause(ctx):
-
     voice = get(client.voice_clients, guild=ctx.guild)
 
     if voice and voice.is_playing():
@@ -208,6 +273,8 @@ async def resume(ctx):
 @client.command()
 async def stop(ctx):
 
+    await delete_hist(ctx) ## to del history
+
     voice = get(client.voice_clients, guild=ctx.guild)
 
     if voice and voice.is_playing():
@@ -228,15 +295,24 @@ async def vol(ctx,vol):
     vol = vol/100
     voice = get(client.voice_clients,guild=ctx.guild)
     voice.source.volume = vol
+    global volume
+    volume = vol
     await ctx.send(f"🔊  {(int)(vol*100)}")
 
 
 @client.command()
 async def search(ctx,keyword=None):
+
+    station = voice_id(ctx)##to get any voice channel id
+
     if keyword == None:
         await ctx.send("❌ pls provide keyword ❌ *(>search rinkiya-ke-papa)*")
         return
+
+    await delete_hist(ctx)##to del hist
+
     key = keyword.replace('-',' ')
+
     global vids
     vids = youtube(key)
     k=1
@@ -246,6 +322,20 @@ async def search(ctx,keyword=None):
         k = k+1
         await ctx.send(content)
 
+    print("waiting now start reaction")
+
+    await ctx.send("---------------------------------------------------------------\n\n\n🔴🔴🔴react on the song you want to play🔴🔴🔴\n*you have 10 seconds*\n*waiting...*\n\n")
+
+    await asyncio.sleep(10)## 5 sec ttime to react
+
+    ans = await reactions(ctx)
+    print(ans)
+    if ans != -1:
+        await lock(ctx,ans+1)
+        return
+    
+    await ctx.send("😢😢😢😢😢😢\nDid'nt recieve you reaction pls use *>lock* to play")
+
 @client.command()
 async def lock(ctx,id:int):
     global vids
@@ -254,6 +344,7 @@ async def lock(ctx,id:int):
         return
     url = f"https://www.youtube.com/watch?v={vids[(id-1)].vid_id}"
     await play(ctx,url)
+
 
 def youtube(key):
     yt = os.environ['yt']
