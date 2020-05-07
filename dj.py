@@ -266,7 +266,7 @@ def youtube(key):
         'key': yt,
         'videoDuration':'medium'
     }
-
+    
     data = requests.get('https://www.googleapis.com/youtube/v3/search',params=params).json()
 
     vids=[]
