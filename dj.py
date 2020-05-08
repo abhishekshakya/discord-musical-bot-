@@ -7,7 +7,7 @@ import requests
 import random
 import asyncio
 
-client = commands.Bot(command_prefix='>',description="aaja baby aaja tera gana bja du")
+client = commands.Bot(command_prefix='>',description="aaja baby aaja tera gana bja du", case_insensitive=True)
 client.remove_command('help')
 
 
@@ -76,18 +76,51 @@ async def delete_hist(ctx):
 ##-------------------------------------------------------------------------RReaection based music to play--------------------------------------------------
 
 async def reactions(ctx):
-    msgs = await ctx.channel.history(limit=7).flatten()
-    msgs.reverse()
-    ans = -1
+    msgs = await ctx.channel.history(limit=10).flatten()
+    ans = 5
     maxi = 0
-    i=0
+    ind=0
+    count = 0
     for msg in msgs:
-        if len(msg.reactions) > maxi:
-            maxi = len(msg.reactions)
-            ans = i 
-        i = i+1
+        if msg.author.id == dj and ("choice number" in msg.content) and ("Title" in msg.content) and ("Channel" in msg.content):
+            for react in msg.reactions:
+                if react.emoji == "🔥" and react.count > maxi:
+                    maxi = react.count
+                    ans = count
+                    print(ans)
+            count = count + 1
+        await msg.clear_reactions()
+        if count == 5:
+            break
+        ind = ind+1
+        
+        
+    # print(count)
+    return 4-ans
+
+##-------------------------------------------------------------------------------------------------------to get the list--------------------------------------
+def youtube(key):
+    yt = os.environ['yt']
+    params = {
+        'part':'snippet',
+        'q':key,
+        'regionCode': 'in',
+        'type':'video',
+        'maxResults':'5',
+        'key': yt,
+        'videoDuration':'medium'
+    }
+
+    data = requests.get('https://www.googleapis.com/youtube/v3/search',params=params).json()
+
+    vids=[]
+
+    for items in data['items']:
+        vids.append(yt_video(items['id']['videoId'],items['snippet']['title'],items['snippet']['channelTitle']))
     
-    return ans
+    return vids
+
+
 #####______________________________________________________________________________________________________________________________REQUIRED____________________________________________
 
 
@@ -97,7 +130,7 @@ async def on_ready():
     print("Bot has started")
 
 
-
+##------------------------------------------------------------------------------------HELP-------------------------------------------------------------------------------------
 @client.command()
 async def help(ctx):
     
@@ -130,12 +163,15 @@ async def help(ctx):
 
     >lock *1-5*                             *select option to play from 5 search results*
 
+    *Note: you can react over searched result to play that audio*
+
     '''
     embed.set_author(name='help')
     embed.add_field(name="Hello There!!",value=st,inline=True)
 
     await ctx.send(st)
-
+    
+#-------------------------------------------------------------------------------------------------------------->join--------------------------------------------------------------
 @client.command()#needed pynacl package for voice
 async def join(ctx):
   
@@ -153,16 +189,20 @@ async def join(ctx):
     for i in mapp:
         if i == dj and mapp[i].channel == channel:
             for i in mem:
-                if i.id == dj:
-                     await i.move_to(None)
-                     if voice and voice.is_connected():
-                        await voice.disconnect()
-            break
+                if i.id == dj and voice and voice.is_connected():
+                    await ctx.send("already connected")
+                    return
+                    # await i.move_to(None)
+                    # if voice and voice.is_connected():
+                    #     await voice.disconnect()
+                     
     voice = await channel.connect()
     await ctx.channel.send("connected 🟢")
 
 
 
+
+#---------------------------------------------------------------------------------------------------------->dc------------------------------------------------------------------
 @client.command()
 async def dc(ctx):
     channel = client.get_channel(station)
@@ -174,6 +214,10 @@ async def dc(ctx):
             return
 
     await ctx.channel.send("already dc hu")
+
+
+
+#------------------------------------------------------------------------------------------------------->play----------------------------------------------------------------------
 
 @client.command()
 async def play(ctx, url= None):
@@ -240,6 +284,7 @@ async def play(ctx, url= None):
     await ctx.send(f" {p} **playing**: {nname} {m}{m}{m}")
 
 
+#------------------------------------------------------------------------------------------------->pause---------------------------------------------------------
 
 @client.command()
 async def pause(ctx):
@@ -255,6 +300,8 @@ async def pause(ctx):
         await ctx.send("Music not playing failed pause")
 
 
+
+#---------------------------------------------------------------------------------------------->resume------------------------------------------------------------------
 @client.command()
 async def resume(ctx):
 
@@ -270,10 +317,12 @@ async def resume(ctx):
         await ctx.send("Music is not paused")
 
 
+
+#-------------------------------------------------------------------------------------------------->stop---------------------------------------------------------------
 @client.command()
 async def stop(ctx):
 
-    await delete_hist(ctx) ## to del history
+    # await delete_hist(ctx) ## to del history
 
     voice = get(client.voice_clients, guild=ctx.guild)
 
@@ -289,6 +338,9 @@ async def stop(ctx):
         print("No music playing failed to stop")
         await ctx.send("No music playing failed to stop")
 
+
+#----------------------------------------------------------------------------------------------->vol----------------------------------------------------------------------------
+
 @client.command()
 async def vol(ctx,vol):
     vol = int(vol)
@@ -299,7 +351,7 @@ async def vol(ctx,vol):
     volume = vol
     await ctx.send(f"🔊  {(int)(vol*100)}")
 
-
+#----------------------------------------------------------------------------------------------------->search-----------------------------------------------------------------------
 @client.command()
 async def search(ctx,keyword=None):
 
@@ -309,7 +361,7 @@ async def search(ctx,keyword=None):
         await ctx.send("❌ pls provide keyword ❌ *(>search rinkiya-ke-papa)*")
         return
 
-    await delete_hist(ctx)##to del hist
+    # await delete_hist(ctx)##to del hist
 
     key = keyword.replace('-',' ')
 
@@ -324,9 +376,9 @@ async def search(ctx,keyword=None):
 
     print("waiting now start reaction")
 
-    await ctx.send("---------------------------------------------------------------\n\n\n🔴🔴🔴react on the song you want to play🔴🔴🔴\n*you have 10 seconds*\n*waiting...*\n\n")
+    await ctx.send("---------------------------------------------------------------\n\n\n🔴🔴🔴react 🔥🔥 on the song you want to play🔴🔴🔴\n*you have 7 seconds*\n*waiting...*\n\n")
 
-    await asyncio.sleep(10)## 5 sec ttime to react
+    await asyncio.sleep(7)## 5 sec ttime to react
 
     ans = await reactions(ctx)
     print(ans)
@@ -336,37 +388,20 @@ async def search(ctx,keyword=None):
     
     await ctx.send("😢😢😢😢😢😢\nDid'nt recieve you reaction pls use *>lock* to play")
 
+
+#------------------------------------------------------------------------------------------>lock-----------------------------------------------------------------------------
+
 @client.command()
-async def lock(ctx,id:int):
+async def lock(ctx,idn:int):
     global vids
     if len(vids) == 0:
         await ctx.send("🧠 phle *>search moosewala* to chla bhaai 🧠")
         return
-    url = f"https://www.youtube.com/watch?v={vids[(id-1)].vid_id}"
+    url = f"https://www.youtube.com/watch?v={vids[(idn-1)].vid_id}"
     await play(ctx,url)
 
 
-def youtube(key):
-    yt = os.environ['yt']
-    params = {
-        'part':'snippet',
-        'q':key,
-        'regionCode': 'in',
-        'type':'video',
-        'maxResults':'5',
-        'key': yt,
-        'videoDuration':'medium'
-    }
-     
-    data = requests.get('https://www.googleapis.com/youtube/v3/search',params=params).json()
 
-    vids=[]
-
-    for items in data['items']:
-        vids.append(yt_video(items['id']['videoId'],items['snippet']['title'],items['snippet']['channelTitle']))
-    
-    return vids
-   
 
 client.run(os.environ['token'])#for heruku)
 
