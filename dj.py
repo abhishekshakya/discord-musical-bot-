@@ -354,6 +354,9 @@ async def vol(ctx,vol):
 #----------------------------------------------------------------------------------------------------->search-----------------------------------------------------------------------
 @client.command()
 async def search(ctx,keyword=None):
+    global vids
+
+    vids.clear()
 
     station = voice_id(ctx)##to get any voice channel id
 
@@ -365,7 +368,7 @@ async def search(ctx,keyword=None):
 
     key = keyword.replace('-',' ')
 
-    global vids
+    # global vids
     vids = youtube(key)
     k=1
     emoji = ["1️⃣","2️⃣", "3️⃣", "4️⃣","5️⃣"]
